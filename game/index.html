@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Brain Trials</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+
+<section id="landing" class="landing">
+  <h1>Brain Trials</h1>
+  <p>Sharpen your mind • Clear all stages</p>
+  <button id="startBtn">Start Mission</button>
+</section>
+
+<section id="gameUI" class="game hidden">
+
+  <header class="hud">
+    <div>❤️ <span id="lives">3</span></div>
+    <div>⭐ <span id="score">0</span></div>
+    <div>⏱ <span id="timer">120</span></div>
+  </header>
+
+  <div id="counter" class="counter"></div>
+
+  <main id="board" class="board"></main>
+
+</section>
+
+<script src="levels/level1.js"></script>
+
+</body>
+</html>
