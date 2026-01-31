@@ -11,7 +11,6 @@ const counter = document.getElementById("counter");
 let index=0,score=0,lives=3,time=120,timer;
 
 
-//Pop up
 const popup=document.createElement("div");
 popup.className="popup";
 popup.innerHTML=`
@@ -29,7 +28,6 @@ const restartBtn=document.getElementById("restartBtn");
 
 restartBtn.onclick=()=>location.reload();
 
-/* ================= START ================= */
 
 startBtn.onclick=()=>{
 landing.style.display="none";
@@ -46,14 +44,10 @@ if(time<=0) end("time");
 },1000);
 }
 
-/* ================= STAGE CLEAR OVERLAY ================= */
-
 const overlay=document.createElement("div");
 overlay.id="overlay";
 overlay.innerText="STAGE CLEAR";
 document.body.appendChild(overlay);
-
-/* ================= HELPERS ================= */
 
 function clearBoard(){
 board.innerHTML="";
@@ -99,9 +93,8 @@ lives--;
 livesEl.innerText=lives;
 if(el) el.classList.add("wrong");
 if(lives<=0) end("life");
+restartBtn();
 }
-
-/* ================= LOAD ================= */
 
 function load(){
 
@@ -166,10 +159,6 @@ end("win");
 }
 }
 
-/* ================= GAME TYPES ================= */
-
-/* ---- DRAG DROP ---- */
-
 function sequence(seq,opts,ans){
 
 const puzzle=document.createElement("div");
@@ -210,7 +199,6 @@ options.appendChild(t);
 board.append(puzzle,options);
 }
 
-/* ---- ODD ---- */
 
 function odd(nums,ans){
 const puzzle=document.createElement("div");
@@ -227,43 +215,46 @@ puzzle.appendChild(t);
 
 board.append(puzzle);
 }
-
-/* ---- MATRIX (GRID FIXED) ---- */
-
-function matrix(arr,opts,ans){
-
-const puzzle=document.createElement("div");
-puzzle.className="matrix";
-
-arr.forEach(v=>{
-const t=tile(v);
-
-if(v==="?"){
-t.classList.add("drop");
-puzzle.appendChild(t);
-}else{
-puzzle.appendChild(t);
+function matrix(arr, opts, ans) {
+    const puzzle = document.createElement("div");
+    puzzle.className = "matrix";
+    
+    arr.forEach(v => {
+        const t = tile(v);
+        
+        if (v === "?") {
+            t.classList.add("drop");
+            t.ondragover = e => {
+                e.preventDefault();
+            };
+            t.ondrop = e => {
+                e.preventDefault();
+                const val = e.dataTransfer.getData("v");
+                if (val == ans) {
+                    success(t);
+                } else {
+                    lose(t);
+                }
+            };
+        }
+        puzzle.appendChild(t);
+    });
+    
+    const options = document.createElement("div");
+    options.className = "options-zone";
+    
+    opts.forEach(v => {
+        const t = tile(v);
+        t.classList.add("draggable");
+        t.draggable = true;
+        t.ondragstart = e => {
+            e.dataTransfer.setData("v", v);
+        };
+        options.appendChild(t);
+    });
+    
+    board.append(puzzle, options);
 }
-});
-
-const options=document.createElement("div");
-options.className="options-zone";
-
-opts.forEach(v=>{
-const t=tile(v);
-t.onclick=()=>{
-if(v==ans){
-document.querySelector(".drop").innerText=v;
-success(t);
-}else lose(t);
-};
-options.appendChild(t);
-});
-
-board.append(puzzle,options);
-}
-
-/* ---- INPUT ---- */
 function inputPuzzle(questionText, ans){
 
 const puzzle=document.createElement("div");
@@ -310,7 +301,6 @@ grid.style.display="grid";
 grid.style.gridTemplateColumns="repeat(2,100px)";
 grid.style.gap="18px";
 
-/* create tiles */
 for(let i=0;i<size;i++){
 const t=tile(i+1);
 t.style.background="#222";
@@ -330,12 +320,10 @@ check();
 puzzle.appendChild(grid);
 board.appendChild(puzzle);
 
-/* generate random pattern */
 for(let i=0;i<3;i++){
 sequence.push(Math.floor(Math.random()*size));
 }
 
-/* flash pattern */
 let delay=0;
 
 sequence.forEach(idx=>{
@@ -360,9 +348,6 @@ success(tiles[sequence[0]]);
 }
 }
 }
-
-
-/* ================= END ================= */
 
 function end(type){
 
