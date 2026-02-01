@@ -1,36 +1,226 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Brain Trials</title>
-<link rel="stylesheet" href="style.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Trials</title>
+   
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+   
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<section id="landing" class="landing">
-  <h1>Brain Trials</h1>
-  <p>Sharpen your mind • Clear all stages</p>
-  <button id="startBtn">Start Mission</button>
-</section>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
 
-<section id="gameUI" class="game hidden">
 
-  <header class="hud">
-    <div>❤️ <span id="lives">3</span></div>
-    <div>⭐ <span id="score">0</span></div>
-    <div>⏱ <span id="timer">120</span></div>
-  </header>
+    <nav id="navbar" class="glass-nav" style="display:none;">
+        <div class="logo">
+            <i class="fa-solid fa-brain"></i> BRAIN TRIALS
+        </div>
+        <div class="nav-links">
+            <span id="user-display">User</span>
+            <button onclick="logout()" class="btn-logout">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+        </div>
+    </nav>
 
-  <div id="counter" class="counter"></div>
+    <section id="auth-section" class="full-screen-center">
+        <div class="glass-card auth-card">
 
-  <main id="board" class="board"></main>
+            <h1 class="glitch-text">BRAIN TRIALS</h1>
+            <p class="subtitle">System Access Required</p>
+            
+            <!-- LOGIN -->
+            <div id="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="login-email" placeholder="Identity (Email)">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-key"></i>
+                    <input type="password" id="login-pass" placeholder="Access Code (Password)">
+                </div>
+                <button onclick="loginUser()" class="btn-neon">
+                    INITIALIZE
+                </button>
+                <p class="switch-text">
+                    New User? <a href="#" onclick="toggleAuth('register')">Create Identity</a>
+                </p>
+            </div>
 
-</section>
+            <!-- REGISTER -->
+            <div id="register-form" style="display:none;">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="reg-name" placeholder="Full Name">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="reg-no" placeholder="Register No">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-at"></i>
+                    <input type="email" id="reg-email" placeholder="name.23csd@sonatech.ac.in">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="reg-pass" placeholder="Set Password">
+                </div>
+                <button onclick="registerUser()" class="btn-neon">
+                    REGISTER IDENTITY
+                </button>
+                <p class="switch-text">
+                    Existing User? <a href="#" onclick="toggleAuth('login')">Login</a>
+                </p>
+            </div>
+        </div>
+    </section>
 
-<script src="levels/level1.js"></script>
+
+    <section id="student-dashboard" class="main-layout" style="display:none;">
+
+        <!-- HEADER -->
+        <div class="dashboard-header">
+            <div class="welcome-text">
+                <h2>Welcome back, <span id="dash-name" class="highlight">Agent</span>.</h2>
+                <p>System Status: <span class="status-online">ONLINE</span></p>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="stat-label">DEPARTMENT</span>
+                    <span id="dash-dept" class="stat-value">--</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">YEAR</span>
+                    <span id="dash-year" class="stat-value">--</span>
+                </div>
+                <div class="stat-box highlight-box">
+                    <span class="stat-label">MISSIONS CLEARED</span>
+                    <span id="dash-events" class="stat-value">0</span>
+                </div>
+            </div>
+        </div>
+
+
+
+        
+
+        <div id="contest-list" class="grid-container"></div>
+
+
+        <h3 class="section-title" style="margin-top:50px;">
+            <i class="fa-solid fa-ranking-star"></i> Leaderboard
+        </h3>
+
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+
+
+    <section id="game-arena" class="full-screen-center" style="display:none;">
+        <div class="game-ui-container glass-card">
+
+            <div class="game-header">
+                <button onclick="exitGame()" class="btn-icon">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+
+                <div class="progress-bar-container">
+                    <div id="game-progress" class="progress-fill"></div>
+                </div>
+
+                <div class="timer">00:00</div>
+            </div>
+            
+            <div id="game-content"></div>
+        </div>
+    </section>
+
+    <section id="admin-dashboard" class="main-layout" style="display:none;">
+
+        <h1><i class="fa-solid fa-user-shield"></i> Admin Command</h1>
+
+        <div class="admin-controls">
+            <button onclick="showAdminTab('create')" class="btn-secondary active">Create Contest</button>
+            <button onclick="showAdminTab('students')" class="btn-secondary">Database</button>
+
+            <button onclick="showAdminTab('results')" class="btn-secondary">Results</button>
+
+            <button onclick="generateAdminInvite()" class="btn-secondary">
+                Generate Admin Link
+            </button>
+        </div>
+
+
+        <div id="admin-create" class="admin-panel glass-card">
+            <h3>New Contest</h3>
+            <input type="text" id="contest-title" placeholder="Contest Title">
+
+            <div class="row">
+                <input type="datetime-local" id="contest-start">
+                <input type="datetime-local" id="contest-end">
+            </div>
+
+            <textarea id="contest-instructions" placeholder="Instructions"></textarea>
+            <textarea id="contest-questions" placeholder="Questions JSON"></textarea>
+
+            <button onclick="createContest()" class="btn-neon">Publish Contest</button>
+        </div>
+
+
+        <div id="admin-students" class="admin-panel glass-card" style="display:none;">
+            <h3>Student Database</h3>
+
+            <table id="students-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="admin-results" class="admin-panel glass-card" style="display:none;">
+            <h3>Contest Results</h3>
+
+            <select id="result-contest-select"></select>
+
+            <div id="result-table-area" style="margin-top:20px;"></div>
+        </div>
+
+    </section>
+
+    <script type="module" src="app.js"></script>
 
 </body>
 </html>
