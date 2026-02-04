@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Command Center | Aptitude Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>Admin Portal</span>
+    </div>
+    
+    <nav class="menu">
+      <button class="nav-btn active" onclick="showTab('dash-tab')">
+        <i class="fa-solid fa-chart-line"></i> Dashboard
+      </button>
+      <button class="nav-btn" onclick="showTab('manager-tab')">
+        <i class="fa-solid fa-folder-plus"></i> Question Manager
+      </button>
+      <button class="nav-btn" onclick="showTab('students-tab')">
+        <i class="fa-solid fa-users"></i> Student Insights
+      </button>
+      <button class="nav-btn" onclick="showTab('results-tab')">
+        <i class="fa-solid fa-square-poll-vertical"></i> Result Control
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button id="admin-logout" class="logout-link">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    
+    <section id="dash-tab" class="tab-content active">
+      <header class="tab-header">
+        <h1>Platform Overview</h1>
+        <p>Real-time statistics of student participation</p>
+      </header>
+
+      <div class="stat-cards">
+        <div class="s-card">
+          <h3 id="total-students">0</h3>
+          <p>Registered Students</p>
+        </div>
+        <div class="s-card">
+          <h3 id="active-contests">0</h3>
+          <p>Live Contests</p>
+        </div>
+        <div class="s-card">
+          <h3 id="avg-pass-rate">0%</h3>
+          <p>Average Pass Rate</p>
+        </div>
+      </div>
+<div class="chart-section " style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+    <div class="clay-card" style="position: relative; height:300px; width:100%">
+            <h3>Department Wise Participation</h3>
+            <canvas id="deptChart"></canvas>
+        </div>
+        <div class="clay-card" style="position: relative; height:300px; width:100%">
+            <h3>Pass vs Fail (Global)</h3>
+            <canvas id="passFailChart"></canvas>
+        </div>
+</div>
+    </section>
+
+    <section id="manager-tab" class="tab-content">
+      <header class="tab-header">
+        <h1>Question Manager</h1>
+        <p>Configure contests, levels, and strict timers</p>
+      </header>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>1. Create/Update Contest</h3>
+          <input type="text" id="con-title" placeholder="Contest Title (e.g. Logical Reasoning 101)">
+          <textarea id="con-instr" placeholder="Instructions for students..."></textarea>
+          <div class="grid-2">
+            <input type="number" id="con-time" placeholder="Timer (seconds)">
+            <input type="number" id="con-levels" placeholder="Total Levels">
+          </div>
+          <button class="btn-primary" id="save-contest-btn">Save Contest Details</button>
+        </div>
+
+        <div class="panel">
+          <h3>2. Add Question to Contest</h3>
+          <select id="target-contest-select">
+            <option value="">Select Contest</option>
+          </select>
+          <textarea id="q-text" placeholder="Enter Question Text"></textarea>
+          <div class="options-inputs">
+            <input type="text" id="opt-a" placeholder="Option A">
+            <input type="text" id="opt-b" placeholder="Option B">
+            <input type="text" id="opt-c" placeholder="Option C">
+            <input type="text" id="opt-d" placeholder="Option D">
+          </div>
+          <select id="q-correct">
+            <option value="">Select Correct Option</option>
+            <option value="A">Option A</option>
+            <option value="B">Option B</option>
+            <option value="C">Option C</option>
+            <option value="D">Option D</option>
+          </select>
+          <button class="btn-primary" id="add-q-btn">Add to Bank</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="students-tab" class="tab-content">
+      <header class="tab-header">
+        <h1>Student Insights</h1>
+        <div class="action-bar">
+          <input type="text" id="student-search" placeholder="Search by Name or Reg No...">
+          <button class="btn-export" onclick="exportStudentData()"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+        </div>
+      </header>
+
+      <div class="panel">
+        <table id="student-master-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Reg No</th>
+              <th>Dept</th>
+              <th>Year</th>
+              <th>Points</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="student-list-body">
+            </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="results-tab" class="tab-content">
+     <header class="tab-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h1>Result Publishing</h1>
+            <p>Approve scores to make them visible on Student Leaderboards</p>
+        </div>
+        <button id="publish-all-btn" class="btn-primary" style="background: #6366f1; padding: 12px 24px; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-upload"></i> Publish All Results
+        </button>
+    </header>
+
+      <div class="panel">
+        <table id="publish-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Contest</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pending-results-body">
+            </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>

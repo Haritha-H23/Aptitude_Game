@@ -1,686 +1,471 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    updateDoc, 
+    collection, 
+    addDoc, 
+    getDocs, 
+    query, 
+    where, 
+    orderBy, 
+    limit, 
+    serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc,serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-// Your web app's Firebase configuration
+// ==========================================
+// 1. CONFIGURATION
+// ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyBqdq0WxT__MEzsLalGzX-7WwjP592Ps4k",
-  authDomain: "aptitudegame-28f6f.firebaseapp.com",
-  projectId: "aptitudegame-28f6f",
-  storageBucket: "aptitudegame-28f6f.firebasestorage.app",
-  messagingSenderId: "998298411933",
-  appId: "1:998298411933:web:c5251b6c8ade05008ac574",
-  measurementId: "G-QVSB8EZDD5"
+    apiKey: "AIzaSyBqdq0WxT__MEzsLalGzX-7WwjP592Ps4k",
+    authDomain: "aptitudegame-28f6f.firebaseapp.com",
+    projectId: "aptitudegame-28f6f"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);      
-const db = getFirestore(app);  
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-
-
-// Global State
-let currentUser = null;
+// ==========================================
+// 2. GLOBAL STATE
+// ==========================================
+let currentUserData = null;
 let currentGameData = [];
 let currentQIndex = 0;
 let userScore = 0;
+let currentContestId = null;
 let timerInterval = null;
+let timeLeft = 0;
 
-window.switchSection = (targetId) => {
-    const sections = ['auth-section', 'student-dashboard', 'admin-dashboard', 'game-arena'];
-    
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if(el.style.display !== 'none') {
-            gsap.to(`#${id}`, {
-                opacity: 0, 
-                y: -20, 
-                duration: 0.3, 
-                onComplete: () => el.style.display = 'none'
-            });
-        }
-    });
-
-    setTimeout(() => {
-        const target = document.getElementById(targetId);
-        target.style.display = (targetId === 'auth-section' || targetId === 'game-arena') ? 'flex' : 'block';
-        
-        if(targetId.includes('dashboard')) target.style.display = 'block';
-
-        gsap.fromTo(`#${targetId}`, 
-            { opacity: 0, y: 20 }, 
-            { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
-        );
-       
-        const nav = document.getElementById('navbar');
-        if(targetId === 'auth-section') nav.style.display = 'none';
-        else {
-            nav.style.display = 'flex';
-            gsap.fromTo("#navbar", {y: -50, opacity:0}, {y: 0, opacity:1, duration: 0.5});
-        }
-
-    }, 300);
-};
-
-window.toggleAuth = (mode) => {
-    const loginForm = document.getElementById('login-form');
-    const regForm = document.getElementById('register-form');
-    
-    if (mode === 'register') {
-        gsap.to(loginForm, {x: -50, opacity: 0, display: 'none', duration: 0.3});
-        gsap.fromTo(regForm, {x: 50, opacity: 0, display: 'block'}, {x: 0, opacity: 1, display: 'block', duration: 0.3, delay: 0.1});
-    } else {
-        gsap.to(regForm, {x: 50, opacity: 0, display: 'none', duration: 0.3});
-        gsap.fromTo(loginForm, {x: -50, opacity: 0, display: 'block'}, {x: 0, opacity: 1, display: 'block', duration: 0.3, delay: 0.1});
-    }
-};
-
-const emailRegex = /^[a-zA-Z]+\.(\d{2})([a-zA-Z]+)@sonatech\.ac\.in$/;
-
-window.registerUser = async () => {
-    const name = document.getElementById('reg-name').value;
-    const regNo = document.getElementById('reg-no').value;
-    const email = document.getElementById('reg-email').value;
-    const pass = document.getElementById('reg-pass').value;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteCode = urlParams.get("invite");
-
-   if(inviteCode){
-    await updateDoc(doc(db,"adminInvites",inviteCode),{used:true});
-    await updateDoc(doc(db,"users",userCred.user.uid),{role:"admin"});
-   }
-
-    if (!name || !regNo || !pass) return Swal.fire("Error", "All fields are required", "warning");
-
-    const match = email.match(emailRegex);
-    if (!match) {
-        return Swal.fire({
-            icon: 'error',
-            title: 'Invalid Email',
-            text: 'Email must follow format: name.yeardept@sonatech.ac.in',
-            background: '#1e293b',
-            color: '#fff'
-        });
-    }
-
-    const year = "20" + match[1];
-    const dept = match[2].toUpperCase();
-
-   try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-        console.log("1. Auth account created successfully:", userCred.user.uid);
-        
-        const match = email.match(emailRegex);
-        const year = "20" + match[1];
-        const dept = match[2].toUpperCase();
-
-        console.log("2. Attempting to write to Firestore...");
-
-        await setDoc(doc(db, "users", userCred.user.uid), {
-            name: name,
-            registerNumber: regNo,
-            email: email,
-            year: year,
-            department: dept,
-            role: "student",
-            eventsAttended: 0,
-            createdAt: serverTimestamp()
-        });
-
-        console.log("3. Firestore document written successfully!");
-        Swal.fire({icon: 'success', title: 'Identity Verified'});
-
-    } catch (error) {
-        console.error("CRITICAL REGISTRATION ERROR:", error.code, error.message);
-        Swal.fire({icon: 'error', title: 'Error', text: error.message});
-    }
-};
-
-window.loginUser = async () => {
-    const email = document.getElementById('login-email').value;
-    const pass = document.getElementById('login-pass').value;
-
+// ==========================================
+// 3. AUTHENTICATION
+// ==========================================
+const handleLogin = async () => {
+    const email = document.getElementById("login-email").value;
+    const pass = document.getElementById("login-pass").value;
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-       
-    } catch (error) {
-        Swal.fire({icon: 'error', title: 'Access Denied', text: 'Invalid Credentials', background: '#1e293b', color: '#fff'});
-    }
+    } catch (e) { alert("Login Failed: " + e.message); }
 };
 
-window.logout = () => {
-    signOut(auth).then(() => {
-        location.reload();
-    });
+const handleLogout = async () => {
+    await signOut(auth);
+    window.location.reload();
 };
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        console.log("User authenticated:", user.email); 
 
-        try {
-            const docRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(docRef);
+// ==========================================
+// 4. NAVIGATION & SIDEBAR LOGIC
+// ==========================================
+function setupNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.onclick = (e) => {
+            e.preventDefault();
+            const target = link.getAttribute('data-target');
             
-            if (docSnap.exists()) {
-                console.log("Database profile found. Loading dashboard...");
-                currentUser = docSnap.data();
-                currentUser.uid = user.uid;
+            // Toggle active class
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
 
-                const display = document.getElementById('user-display');
-                if(display) display.innerHTML = `<i class="fa-solid fa-user-astronaut"></i> ${currentUser.name}`;
-                
-                if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
-                    loadAdminDashboard();
-                } else {
-                    loadStudentDashboard();
-                }
-            } else {
-                console.error("User exists in Auth but not in Database!");
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Profile Not Found',
-                    text: 'Your account login works, but your student profile is missing from the database. Please register again with a new email or contact admin.',
-                    confirmButtonText: 'Logout',
-                    preConfirm: () => logout()
-                });
+            // Switch Sections
+            document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
+            document.getElementById(target).style.display = 'block';
+
+            if (target === 'dash-contests') loadAttemptedContests();
+            if (target === 'dash-insights') loadInsights();
+            if (target === 'dash-leaderboard'){
+                populateLeaderboardDropdown(); // Update list of contests
+                loadRankings("global");
             }
-        } catch (error) {
-            console.error("Error fetching user data:", error);
-            Swal.fire("System Error", "Could not connect to database. Check console.", "error");
-        }
+        };
+    });
+}
+// Function to fill the dropdown with existing contests
+async function populateLeaderboardDropdown() {
+    const contestGroup = document.getElementById("contest-options");
+    if (!contestGroup) return;
+
+    const snap = await getDocs(collection(db, "contests"));
+    contestGroup.innerHTML = ""; // Clear existing
+
+    snap.forEach(d => {
+        const c = d.data();
+        const opt = document.createElement("option");
+        opt.value = d.id; // Use contest ID as the value
+        opt.innerText = c.title;
+        contestGroup.appendChild(opt);
+    });
+}
+
+// Main function to fetch data based on selection
+async function loadRankings(type = "global") {
+    const tbody = document.querySelector("#leaderboard-table tbody");
+    tbody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+
+    let q;
+    if (type === "global") {
+        // GLOBAL: Query users collection
+        q = query(
+            collection(db, "users"),
+            where("role", "==", "student"),
+            orderBy("totalScore", "desc"),
+            limit(20)
+        );
     } else {
-        console.log("No user logged in.");
-        switchSection('auth-section');
+        // CONTEST WISE: Query results collection for specific contest
+        q = query(
+            collection(db, "results"),
+            where("contestId", "==", type),
+            where("published", "==", true),
+            orderBy("score", "desc")
+        );
     }
-});
 
+    const snap = await getDocs(q);
+    tbody.innerHTML = "";
+    let rank = 1;
 
-function loadStudentDashboard() {
-    switchSection('student-dashboard');
-    
-    document.getElementById('dash-name').innerText = currentUser.name;
-    document.getElementById('dash-dept').innerText = currentUser.department;
-    document.getElementById('dash-year').innerText = currentUser.year;
-    document.getElementById('dash-events').innerText = currentUser.eventsAttended;
-
-    fetchContests();
-    loadLeaderboard();
-}
-
-async function fetchContests() {
-
-    const container = document.getElementById('contest-list');
-    container.innerHTML = '';
-
-    const newWrap = document.createElement('div');
-    newWrap.className = 'mission-section';
-
-    const completedWrap = document.createElement('div');
-    completedWrap.className = 'mission-section';
-
-    newWrap.innerHTML = `<h3 class="mission-title"><i class="fa-solid fa-rocket"></i> New Contests</h3>
-                        <div class="grid-container" id="new-grid"></div>`;
-
-    completedWrap.innerHTML = `<h3 class="mission-title"><i class="fa-solid fa-circle-check"></i> Completed Contests</h3>
-                              <div class="grid-container" id="done-grid"></div>`;
-
-    container.appendChild(newWrap);
-    container.appendChild(completedWrap);
-
-    const newGrid = document.getElementById('new-grid');
-    const doneGrid = document.getElementById('done-grid');
-
-    const querySnapshot = await getDocs(collection(db, "contests"));
-
-    querySnapshot.forEach((docSnap) => {
-
-        const data = docSnap.data();
-        const isCompleted =
-            currentUser.completedContests &&
-            currentUser.completedContests.includes(docSnap.id);
-
-        const card = document.createElement('div');
-        card.className = 'glass-card hover-card';
-
-        card.innerHTML = `
-            <h3><i class="fa-solid fa-trophy"></i> ${data.title}</h3>
-            <p style="color:#ccc">${data.instructions}</p>
-            <button class="btn-neon">${isCompleted ? "COMPLETED" : "START CONTEST"}</button>
-        `;
-
-        const btn = card.querySelector('button');
-
-        if(isCompleted){
-            card.classList.add('completed-card');
-            btn.className = 'btn-complete';
-            btn.disabled = true;
-            doneGrid.appendChild(card);
-        } else {
-            btn.onclick = () => enterContest(docSnap.id);
-            newGrid.appendChild(card);
-        }
-    });
-}
-
-async function loadLeaderboard(){
-
-    const table = document.querySelector("#leaderboard-table tbody");
-
-    if(!table) return;
-
-    table.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
-
-    const snap = await getDocs(collection(db,"users"));
-
-    let players = [];
-
-    snap.forEach(doc=>{
-        const u = doc.data();
-
-        if(u.role === "student"){
-            players.push({
-                name: u.name,
-                dept: u.department,
-                score: u.totalScore || 0
-            });
-        }
-    });
-
-    players.sort((a,b)=>b.score-a.score);
-
-    table.innerHTML = "";
-
-    if(players.length === 0){
-        table.innerHTML =
-          "<tr><td colspan='4'>No data yet</td></tr>";
+    if (snap.empty) {
+        tbody.innerHTML = "<tr><td colspan='4'>No data available for this selection.</td></tr>";
         return;
     }
 
-    players.forEach((p,i)=>{
-        table.innerHTML += `
-            <tr>
-                <td>${i+1}</td>
-                <td>${p.name}</td>
-                <td>${p.dept}</td>
-                <td>${p.score}</td>
-            </tr>
+    // Process rows
+    for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        let name, dept, points;
+
+        if (type === "global") {
+            name = data.name;
+            dept = data.department;
+            points = data.totalScore || 0;
+        } else {
+            // For contest-wise, we need to fetch the user's name from the users collection
+            const userRef = doc(db, "users", data.userId);
+            const userSnap = await getDoc(userRef);
+            const userData = userSnap.data();
+            name = userData?.name || "Student";
+            dept = userData?.department || "N/A";
+            points = data.score;
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><strong>#${rank++}</strong></td>
+            <td>${name}</td>
+            <td>${dept}</td>
+            <td><span class="badge-points">${points} pts</span></td>
         `;
+        tbody.appendChild(row);
+    }
+}
+
+// EVENT LISTENER for the dropdown
+document.getElementById("leaderboard-filter").onchange = (e) => {
+    loadRankings(e.target.value);
+};
+// ==========================================
+// 5. DASHBOARD & INSIGHTS
+// ==========================================
+async function loadDashboard() {
+    document.getElementById("auth-section").style.display = "none";
+    document.getElementById("student-portal-wrapper").style.display = "flex";
+    
+    document.getElementById("dash-name").innerText = currentUserData.name;
+    document.getElementById("dash-dept").innerText = currentUserData.department;
+    document.getElementById("dash-year").innerText = currentUserData.year;
+    document.getElementById("dash-score").innerText = currentUserData.totalScore || 0;
+    document.getElementById("dash-events").innerText = currentUserData.eventsAttended || 0;
+
+    loadContests();
+}
+
+async function loadInsights() {
+    const resultsRef = collection(db, "results");
+    // Filter by current user and published results
+    const q = query(
+        resultsRef, 
+        where("userId", "==", auth.currentUser.uid), 
+        where("published", "==", true), 
+        orderBy("timestamp", "asc")
+    );
+    
+    const snap = await getDocs(q);
+
+    const scoreLabels = [];
+    const scoreData = [];
+    
+    const activityMap = {}; // To store date -> count
+
+    snap.forEach(d => {
+        const data = d.data();
+        const dateStr = new Date(data.timestamp?.toDate()).toLocaleDateString();
+        
+        // Data for Score Graph
+        scoreLabels.push(dateStr);
+        scoreData.push(data.score);
+
+        // Data for Activity Graph
+        activityMap[dateStr] = (activityMap[dateStr] || 0) + 1;
+    });
+
+    // Render Chart 1: Score Trend
+    renderChart('scoreChart', scoreLabels, scoreData, 'Points', '#6366f1');
+
+    // Render Chart 2: Activity Count
+    const activityLabels = Object.keys(activityMap);
+    const activityData = Object.values(activityMap);
+    renderChart('attemptChart', activityLabels, activityData, 'Contests Attempted', '#f59e0b', 'bar');
+}
+function renderChart(id, labels, data, label, color, type = 'line') {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing chart to prevent flickering/overlap
+    if (window[id + 'Instance']) window[id + 'Instance'].destroy();
+
+    window[id + 'Instance'] = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                borderColor: color,
+                backgroundColor: type === 'bar' ? color : color + '22',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            },
+            layout: {
+        padding: {
+            left: 10,
+            right: 20,
+            bottom: 20
+        }
+    }
+        }
+
+    });
+}
+// ==========================================
+// 6. GAME ENGINE & LEVEL TRANSITION
+// ==========================================
+async function loadContests() {
+    const container = document.getElementById("contest-list");
+    const snap = await getDocs(collection(db, "contests"));
+    container.innerHTML = "";
+
+    snap.forEach(d => {
+        const c = d.data();
+        const div = document.createElement("div");
+        div.className = "contest-item clay-card";
+        div.innerHTML = `
+            <h4>${c.title}</h4>
+            <p>${c.instructions || 'Standard Rules Apply'}</p>
+            <button class="btn-primary" id="btn-${d.id}">Enroll & Start</button>
+        `;
+        container.appendChild(div);
+        document.getElementById(`btn-${d.id}`).onclick = () => enterGame(d.id, c);
     });
 }
 
+async function loadAttemptedContests() {
+    const tbody = document.getElementById("attempted-list-body");
+    if (!tbody) return;
 
-window.enterContest = async (contestId) => {
+    // 1. Fetch results for this user
+    const q = query(
+        collection(db, "results"), 
+        where("userId", "==", auth.currentUser.uid),
+        orderBy("timestamp", "desc")
+    );
+    
+    const snap = await getDocs(q);
+    tbody.innerHTML = "";
 
-    const docRef = doc(db, "contests", contestId);
-    const docSnap = await getDoc(docRef);
-    
-    if (!docSnap.exists()) return;
-    
-    const data = docSnap.data();
-    currentGameData = data.questions;
+    if (snap.empty) {
+        tbody.innerHTML = "<tr><td colspan='4'>No contests attempted yet.</td></tr>";
+        return;
+    }
+
+    // 2. Process each result
+    for (const resDoc of snap.docs) {
+        const res = resDoc.data();
+        
+        // Fetch contest title (since results only store contestId)
+        const conSnap = await getDoc(doc(db, "contests", res.contestId));
+        const conTitle = conSnap.exists() ? conSnap.data().title : "Unknown Contest";
+        
+        const date = res.timestamp ? res.timestamp.toDate().toLocaleDateString() : "Pending";
+        
+        // Logic for Score and Rank (only if published)
+        const scoreDisplay = res.published ? `<strong>${res.score}</strong>` : "<i>Hidden</i>";
+        const rankDisplay = res.published ? (res.rank || "N/A") : "<i>Waiting...</i>";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${conTitle}</td>
+            <td>${date}</td>
+            <td>${scoreDisplay}</td>
+            <td>${rankDisplay}</td>
+        `;
+        tbody.appendChild(row);
+    }
+}
+function enterGame(id, data) {
+    currentContestId = id;
+    currentGameData = data.questions || [];
     currentQIndex = 0;
     userScore = 0;
+    timeLeft = data.timeLimit || 60;
 
-await addDoc(collection(db,"registrations"),{
-    userId: currentUser.uid,
-    contestId: contestId,
-    startedAt: serverTimestamp()
-});
-
-
-    switchSection('game-arena');
+    document.getElementById("student-portal-wrapper").style.display = "none";
+    document.getElementById("game-arena").style.display = "flex";
     
-    renderGamifiedQuestion();
-    startTimer(10 * 60);
-
-};
-
-function startTimer(duration) {
-    let timer = duration, minutes, seconds;
-    const display = document.querySelector('.timer');
-    clearInterval(timerInterval);
-    
-    timerInterval = setInterval(function () {
-        minutes = parseInt(timer / 60, 10);
-        seconds = parseInt(timer % 60, 10);
-
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-
-        display.textContent = minutes + ":" + seconds;
-
-        if (--timer < 0) {
-            clearInterval(timerInterval);
-            finishGame(true); 
-        }
-    }, 1000);
+    startTimer();
+    renderQuestion();
 }
 
-window.allowDrop = (ev) => { ev.preventDefault(); };
-window.dragStart = (ev) => { ev.dataTransfer.setData("text", ev.target.dataset.value); };
-window.dropAnswer = (ev) => {
-    ev.preventDefault();
-    const data = ev.dataTransfer.getData("text");
-    const target = ev.target;
-    target.innerText = data;
-    target.classList.add('filled');
-    setTimeout(() => { window.handleAnswer(data); }, 500);
-};
+function renderQuestion() {
+    const q = currentGameData[currentQIndex];
+    const totalQs = currentGameData.length;
+    const currentLevel = Math.min(5, Math.ceil((currentQIndex + 1) / (totalQs / 5)));
 
-function renderGamifiedQuestion(){
+    document.getElementById("level-indicator").innerText = `Level ${currentLevel} / 5`;
+    document.getElementById("progress-fill").style.width = `${(currentQIndex / totalQs) * 100}%`;
 
-    if(currentQIndex >= currentGameData.length){
-        finishGame();
-        return;
+    const area = document.getElementById("game-content");
+    area.innerHTML = `
+        <h2 style="margin-bottom:20px;">${q.q}</h2>
+        <div class="options-grid" id="opt-container"></div>
+    `;
+
+    q.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "btn-option";
+        btn.innerText = opt;
+        btn.onclick = () => handleAnswer(opt, q.a || q.correct);
+        document.getElementById("opt-container").appendChild(btn);
+    });
+}
+
+function handleAnswer(selected, correct) {
+    if (String(selected) === String(correct)) userScore += 10;
+
+    const questionsPerLevel = Math.ceil(currentGameData.length / 5);
+    
+    // Check if Level Finished
+    if ((currentQIndex + 1) % questionsPerLevel === 0 && (currentQIndex + 1) < currentGameData.length) {
+        showLevelTransition();
+    } else {
+        nextStep();
     }
-
-    const qData = currentGameData[currentQIndex];
-
-    const contentArea = document.getElementById("game-content");
-    const progressBar = document.getElementById("game-progress");
-
-    progressBar.style.width =
-        ((currentQIndex)/currentGameData.length*100)+"%";
-
-    contentArea.innerHTML="";
-
-    const gameCard=document.createElement("div");
-    gameCard.className="gamified-card-full";
-
-    const title=document.createElement("h2");
-    title.className="question-text";
-    title.innerText=qData.q;
-
-    gameCard.appendChild(title);
-
-    /* ================= PUZZLE ZONE ================= */
-
-    const interaction=document.createElement("div");
-    interaction.className="interaction-area-center";
-
-    const drop=document.createElement("div");
-    drop.className="grid-tile target-slot";
-    drop.innerText="?";
-
-    drop.ondragover=(e)=>e.preventDefault();
-
-    drop.ondrop=(e)=>{
-        const val=e.dataTransfer.getData("text");
-        drop.innerText=val;
-
-        setTimeout(()=>{
-            userScore+=10;
-            currentQIndex++;
-            renderGamifiedQuestion();
-        },500);
-    };
-
-    interaction.appendChild(drop);
-
-    gameCard.appendChild(interaction);
-
-
-    const inventory=document.createElement("div");
-    inventory.className="inventory-section";
-
-    const row=document.createElement("div");
-    row.className="inventory-row";
-
-    (qData.options || []).forEach(opt=>{
-        const tile=document.createElement("div");
-        tile.className="drag-tile-item";
-        tile.draggable=true;
-        tile.innerText=opt;
-
-        tile.ondragstart=(e)=>{
-            e.dataTransfer.setData("text",opt);
-        };
-
-        row.appendChild(tile);
-    });
-
-    inventory.appendChild(row);
-    gameCard.appendChild(inventory);
-
-    contentArea.appendChild(gameCard);
 }
 
-
-window.exitGame = () => {
-    Swal.fire({
-        title: 'Abort Mission?',
-        text: "Progress will be lost.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, Exit',
-        background: '#1e293b',
-        color: '#fff'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            clearInterval(timerInterval);
-            switchSection('student-dashboard');
-        }
-    });
-};
-
-async function finishGame(timeOut = false) {
-    clearInterval(timerInterval);
-    
-    // 1. Force a UI refresh for the result
-    const contentArea = document.getElementById('game-content');
-    contentArea.innerHTML = `
-        <div class="result-card">
-            <h1>${timeOut ? "MISSION FAILED" : "LEVEL COMPLETED"}</h1>
-            <p>Score: ${userScore}</p>
-            <button class="btn-neon" onclick="location.reload()">BACK TO HUB</button>
+function showLevelTransition() {
+    const area = document.getElementById("game-content");
+    area.innerHTML = `
+        <div class="level-complete-ui">
+            <div class="stat-icon" style="margin: 0 auto 20px;"><i class="fa-solid fa-circle-check"></i></div>
+            <h2>Level Completed!</h2>
+            <p>You've mastered this section. Ready for the next one?</p>
+            <button class="btn-primary" id="btn-next-lvl" style="margin-top:20px;">Continue to Next Level</button>
         </div>
     `;
-
-    console.log("Starting finishGame process...");
-    console.log("Current UID:", currentUser.uid);
-    console.log("Score to add:", userScore);
-
-    try {
-        const userRef = doc(db, "users", currentUser.uid);
-
-        // 2. SET with MERGE (This fixes the "not updating" issue if the doc doesn't exist)
-        // It will either update totalScore or create it if missing.
-        await setDoc(userRef, {
-            totalScore: increment(userScore),
-            eventsAttended: increment(1),
-            lastActive: serverTimestamp()
-        }, { merge: true });
-
-        console.log("✅ Firestore totalScore updated successfully!");
-
-        // 3. Update local state
-        currentUser.totalScore = (currentUser.totalScore || 0) + userScore;
-
-        // 4. Record the specific level attempt
-        await addDoc(collection(db, "registrations"), {
-            userId: currentUser.uid,
-            contestId: currentContestId,
-            score: userScore,
-            timestamp: serverTimestamp()
-        });
-        
-        console.log("✅ Registration recorded!");
-
-    } catch (error) {
-        console.error("❌ CRITICAL ERROR:", error.code, error.message);
-        if (error.code === 'permission-denied') {
-            alert("Firebase Rules are blocking the write! Check your Security Rules.");
-        }
-    }
-
-    if (typeof loadLeaderboard === "function") loadLeaderboard();
+    document.getElementById("btn-next-lvl").onclick = nextStep;
 }
 
-function loadAdminDashboard() {
-    switchSection('admin-dashboard');
+function nextStep() {
+    currentQIndex++;
+    if (currentQIndex < currentGameData.length) {
+        renderQuestion();
+    } else {
+        finishGame();
+    }
 }
 
-window.showAdminTab = (tabName) => {
-    document.querySelectorAll('.admin-panel').forEach(el => el.style.display = 'none');
-    document.getElementById(`admin-${tabName}`).style.display = 'block';
+async function finishGame() {
+    clearInterval(timerInterval);
+    const userId = auth.currentUser.uid;
 
-    
-    if(tabName === 'students') fetchAllStudents();
-    if(tabName === "results") loadAdminResults()
-};
-
-window.createContest = async () => {
-    
-    const title = document.getElementById('contest-title').value;
-    
-    const start = document.getElementById('contest-start').value;
-    const end = document.getElementById('contest-end').value;
-    const instructions = document.getElementById('contest-instructions').value;
-    
-    const questionsRaw = document.getElementById('contest-questions').value;
-
-    if(!title || !questionsRaw) return Swal.fire("Error", "Missing Mission Data", "error");
-
-    try {
-        const questionsJson = JSON.parse(questionsRaw);
-        
-        await addDoc(collection(db, "contests"), {
-            title: title,
-            startTime: start,
-            endTime: end,
-            instructions: instructions,
-            questions: questionsJson, 
-            status: "ACTIVE", 
-            createdAt: serverTimestamp()
-        });
-        
-        Swal.fire({
-            title: 'MISSION DEPLOYED', 
-            text: 'The operation is now live on all student terminals.', 
-            icon: 'success',
-            background: '#0f172a', 
-            color: '#38bdf8'
-        });
-        
-    } catch (e) {
-        Swal.fire("Data Error", "Your JSON formatting is incorrect.", "error");
-    }
-};
-async function fetchAllStudents() {
-    const tbody = document.querySelector('#students-table tbody');
-    tbody.innerHTML = '<tr><td colspan="4">Decrypting Database...</td></tr>';
-
-    const q = query(collection(db, "users"), where("role", "==", "student"));
-    const querySnapshot = await getDocs(q);
-    
-    window.allStudents = []; 
-    querySnapshot.forEach(doc => window.allStudents.push(doc.data()));
-    
-    renderStudentTable(window.allStudents);
-}
-
-window.filterStudents = () => {
-    const deptFilter = document.getElementById('filter-dept').value;
-   
-    const filtered = window.allStudents.filter(s => {
-        return (deptFilter === 'ALL' || s.department === deptFilter);
-    });
-    renderStudentTable(filtered);
-};
-
-function renderStudentTable(students) {
-    const tbody = document.querySelector('#students-table tbody');
-    tbody.innerHTML = "";
-    
-    if(students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">No agents found.</td></tr>';
-        return;
-    }
-
-    students.forEach(s => {
-        tbody.innerHTML += `
-            <tr>
-                <td><span class="agent-name">${s.name}</span></td>
-                <td>${s.registerNumber}</td>
-                <td><span class="dept-tag">${s.department}</span></td>
-                <td>${s.totalScore}</td>
-            </tr>
-        `;
-    });
-}
-
-window.generateAdminInvite = async () => {
-
-    const code = Math.random().toString(36).substring(2,8);
-
-    await setDoc(doc(db,"adminInvites",code),{
-        createdAt: serverTimestamp(),
-        used:false
-    });
-
-    const link = `${location.origin}/index.html?invite=${code}`;
-
-    Swal.fire({
-        title:"Admin Invite Link",
-        html:`<input value="${link}" style="width:100%">`,
-        icon:"success"
-    });
-};
-async function loadAdminResults(){
-
-    const area = document.getElementById("result-table-area");
-
-    area.innerHTML = "Loading...";
-
-    const snap = await getDocs(collection(db,"results"));
-
-    if(snap.empty){
-        area.innerHTML = "<p>No results yet</p>";
-        return;
-    }
-
-    let html = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Dept</th>
-                    <th>Score</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
+    document.getElementById("game-content").innerHTML = `
+        <div class="level-complete-ui">
+            <h2>Game Completed!</h2>
+            <p>Score hidden until Admin publishes results.</p>
+            <button class="btn-primary" onclick="window.location.reload()">Back to Home</button>
+        </div>
     `;
-
-    snap.forEach(doc=>{
-        const r = doc.data();
-
-        html += `
-            <tr>
-                <td>${r.name}</td>
-                <td>${r.department}</td>
-                <td>${r.score}</td>
-                <td style="color:${r.passed ? '#22c55e':'#ef4444'}">
-                    ${r.passed ? 'PASS':'FAIL'}
-                </td>
-            </tr>
-        `;
+    console.log(`User ${userId} finished with score: ${userScore}`);
+    await addDoc(collection(db, "results"), {
+        userId,
+        contestId: currentContestId,
+        score: userScore,
+        published: false, // Critical: Hide score from student
+        timestamp: serverTimestamp()
     });
-
-    html += "</tbody></table>";
-
-    area.innerHTML = html;
 }
-window.goToNextLevel = () => {
-    switchSection('student-dashboard');
-    fetchContests();
-};
+
+// ==========================================
+// 7. TIMER & INITIALIZATION
+// ==========================================
+function startTimer() {
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        document.getElementById("timer-display").innerText = `Time: ${m}:${s < 10 ? '0' : ''}${s}`;
+        if (timeLeft <= 0) finishGame();
+    }, 1000);
+}
+// Inside app.js
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+
+        if (snap.exists()) {
+            const userData = snap.data();
+            currentUserData = userData;
+
+            if (userData.role === "admin") {
+                window.location.href = "admin/index.html"; 
+            } else {
+                // 1. Unhide the dashboard container first
+                const portal = document.querySelector(".portal-container");
+                if (portal) {
+                    portal.classList.remove("hidden");
+                    portal.style.display = "flex";
+                }
+                document.getElementById("auth-section").classList.add("hidden");
+
+                // 2. Load the content
+                loadDashboard(); 
+
+                // 3. CRITICAL: Initialize navigation listeners now that UI is visible
+                setupNavigation(); 
+            }
+        }
+    } else {
+        switchSection("auth-section");
+    }
+});
+document.getElementById("btn-login-submit").onclick = handleLogin;
+document.getElementById("logout-trigger").onclick = handleLogout;
